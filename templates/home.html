@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Student Information System</h1>
+<p>This is the basic version of a student academic management system built with Django.</p>
+<p>Main features in this version include:</p>
+<ul>
+    <li>Homepage with system introduction</li>
+    <li>Navigation bar</li>
+    <li>User registration, login and logout</li>
+    <li>Student information CRUD</li>
+    <li>JSON API endpoints for student data</li>
+</ul>
+
+{% if user.is_authenticated %}
+    <p>You are logged in as <strong>{{ user.username }}</strong>.</p>
+    <a class="btn" href="{% url 'student_list' %}">Go to Student List</a>
+{% else %}
+    <a class="btn" href="{% url 'login' %}">Login</a>
+    <a class="btn" href="{% url 'register' %}">Register</a>
+{% endif %}
+{% endblock %}
