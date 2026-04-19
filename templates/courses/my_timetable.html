@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>My Timetable</h2>
+
+<form method="get" style="margin-bottom: 20px;">
+    <label for="student">Select Student:</label>
+    <select name="student" id="student" onchange="this.form.submit()">
+        <option value="">-- Choose a student --</option>
+        {% for student in students %}
+            <option value="{{ student.id }}" {% if selected_student and selected_student.id == student.id %}selected{% endif %}>
+                {{ student.student_id }} - {{ student.full_name }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+{% if selected_student %}
+    <p><strong>Student:</strong> {{ selected_student.full_name }}</p>
+    <p><strong>Student ID:</strong> {{ selected_student.student_id }}</p>
+
+    <table>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Lecturer</th>
+            <th>Credits</th>
+            <th>Time</th>
+            <th>Classroom</th>
+            <th>Action</th>
+        </tr>
+
+        {% for course in courses %}
+        <tr>
+            <td>{{ course.code }}</td>
+            <td>{{ course.name }}</td>
+            <td>{{ course.lecturer }}</td>
+            <td>{{ course.credits }}</td>
+            <td>{{ course.weekday }} {{ course.start_time }} - {{ course.end_time }}</td>
+            <td>{{ course.classroom }}</td>
+            <td>
+                <a class="btn btn-danger" href="{% url 'drop_course' selected_student.id course.id %}">Drop</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7">No enrolled courses yet.</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <p>Please select a student to view the timetable.</p>
+{% endif %}
+{% endblock %}

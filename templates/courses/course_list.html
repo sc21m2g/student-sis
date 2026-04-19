@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Course List</h2>
+
+<form method="get" style="margin-bottom: 20px;">
+    <label for="student">Select Student:</label>
+    <select name="student" id="student" onchange="this.form.submit()">
+        <option value="">-- Choose a student --</option>
+        {% for student in students %}
+            <option value="{{ student.id }}" {% if selected_student and selected_student.id == student.id %}selected{% endif %}>
+                {{ student.student_id }} - {{ student.full_name }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+<a class="btn" href="{% url 'course_create' %}">Add Course</a>
+
+<table>
+    <tr>
+        <th>Code</th>
+        <th>Name</th>
+        <th>Lecturer</th>
+        <th>Credits</th>
+        <th>Time</th>
+        <th>Classroom</th>
+        <th>Action</th>
+    </tr>
+
+    {% for course in courses %}
+    <tr>
+        <td>{{ course.code }}</td>
+        <td>{{ course.name }}</td>
+        <td>{{ course.lecturer }}</td>
+        <td>{{ course.credits }}</td>
+        <td>{{ course.weekday }} {{ course.start_time }} - {{ course.end_time }}</td>
+        <td>{{ course.classroom }}</td>
+        <td>
+            {% if selected_student %}
+                {% if course.id in enrolled_course_ids %}
+                    Enrolled
+                {% else %}
+                    <a class="btn" href="{% url 'enroll_course' selected_student.id course.id %}">Enroll</a>
+                {% endif %}
+            {% else %}
+                Select a student first
+            {% endif %}
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="7">No courses available.</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

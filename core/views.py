@@ -5,8 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
-from .forms import RegisterForm, StudentForm
-from .models import Student
+from .forms import RegisterForm, StudentForm, CourseForm
+from .models import Student, Course
 
 
 def home(request):
@@ -143,3 +143,94 @@ def api_student_detail(request, pk):
         return JsonResponse({'message': 'Student deleted successfully'}, status=200)
 
     return HttpResponseNotAllowed(['GET', 'PUT', 'DELETE'])
+
+
+@login_required
+def course_list(request):
+    courses = Course.objects.all().order_by('code')
+    students = Student.objects.all().order_by('student_id')
+    selected_student_id = request.GET.get('student')
+
+    selected_student = None
+    enrolled_course_ids = []
+
+    if selected_student_id:
+        try:
+            selected_student = Student.objects.get(id=selected_student_id)
+            enrolled_course_ids = selected_student.enrolled_courses.values_list('id', flat=True)
+        except Student.DoesNotExist:
+            selected_student = None
+
+    return render(request, 'courses/course_list.html', {
+        'courses': courses,
+        'students': students,
+        'selected_student': selected_student,
+        'enrolled_course_ids': enrolled_course_ids,
+    })
+
+
+@login_required
+def enroll_course(request, student_id, course_id):
+    student = get_object_or_404(Student, pk=student_id)
+    course = get_object_or_404(Course, pk=course_id)
+
+    if course in student.enrolled_courses.all():
+        messages.warning(request, f'{student.full_name} has already enrolled in {course.name}.')
+    else:
+        student.enrolled_courses.add(course)
+        messages.success(request, f'{student.full_name} successfully enrolled in {course.name}.')
+
+    return redirect(f'/courses/?student={student.id}')
+
+
+@login_required
+def my_timetable(request):
+    students = Student.objects.all().order_by('student_id')
+    selected_student_id = request.GET.get('student')
+
+    selected_student = None
+    courses = []
+
+    if selected_student_id:
+        try:
+            selected_student = Student.objects.get(id=selected_student_id)
+            courses = selected_student.enrolled_courses.all().order_by('weekday', 'start_time')
+        except Student.DoesNotExist:
+            selected_student = None
+
+    return render(request, 'courses/my_timetable.html', {
+        'students': students,
+        'selected_student': selected_student,
+        'courses': courses,
+    })
+
+
+@login_required
+def drop_course(request, student_id, course_id):
+    student = get_object_or_404(Student, pk=student_id)
+    course = get_object_or_404(Course, pk=course_id)
+
+    if course in student.enrolled_courses.all():
+        student.enrolled_courses.remove(course)
+        messages.success(request, f'{student.full_name} dropped {course.name}.')
+    else:
+        messages.warning(request, f'{student.full_name} is not enrolled in this course.')
+
+    return redirect(f'/my-timetable/?student={student.id}')
+
+
+@login_required
+def course_create(request):
+    if request.method == 'POST':
+        form = CourseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Course created successfully.')
+            return redirect('course_list')
+    else:
+        form = CourseForm()
+
+    return render(request, 'courses/course_form.html', {
+        'form': form,
+        'title': 'Add Course'
+    })
