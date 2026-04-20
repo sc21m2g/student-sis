@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>My Profile</h2>
+
+<p><strong>Student ID:</strong> {{ student.student_id }}</p>
+<p><strong>Full Name:</strong> {{ student.full_name }}</p>
+<p><strong>Email:</strong> {{ student.email }}</p>
+<p><strong>major:</strong> {{ student.major }}</p>
+<p><strong>Year:</strong> {{ student.year }}</p>
+<p>
+    <a class="btn" href="{% url 'course_list' %}">View Courses</a>
+    <a class="btn" href="{% url 'my_timetable' %}">My Timetable</a>
+</p>
+
+<h3>Edit My Profile</h3>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn" type="submit">Update Profile</button>
+</form>
+{% endblock %}

@@ -18,11 +18,22 @@ def register_view(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
+
+            Student.objects.create(
+                user=user,
+                student_id=form.cleaned_data['student_id'],
+                full_name=form.cleaned_data['full_name'],
+                email=form.cleaned_data['email'],
+                major=form.cleaned_data['major'],
+                year=form.cleaned_data['year'],
+            )
+
             login(request, user)
             messages.success(request, 'Registration successful.')
-            return redirect('home')
+            return redirect('my_profile')
     else:
         form = RegisterForm()
+
     return render(request, 'registration/register.html', {'form': form})
 
 
@@ -78,7 +89,7 @@ def student_delete(request, pk):
 @csrf_exempt
 def api_students(request):
     if request.method == 'GET':
-        students = list(Student.objects.values('id', 'student_id', 'full_name', 'email', 'course', 'year'))
+        students = list(Student.objects.values('id', 'student_id', 'full_name', 'email', 'major', 'year'))
         return JsonResponse({'students': students}, status=200)
 
     if request.method == 'POST':
@@ -88,7 +99,7 @@ def api_students(request):
                 student_id=data['student_id'],
                 full_name=data['full_name'],
                 email=data['email'],
-                course=data['course'],
+                major=data['major'],
                 year=data.get('year', 1),
             )
             return JsonResponse({
@@ -98,7 +109,7 @@ def api_students(request):
                     'student_id': student.student_id,
                     'full_name': student.full_name,
                     'email': student.email,
-                    'course': student.course,
+                    'major': student.major,
                     'year': student.year,
                 }
             }, status=201)
@@ -121,7 +132,7 @@ def api_student_detail(request, pk):
             'student_id': student.student_id,
             'full_name': student.full_name,
             'email': student.email,
-            'course': student.course,
+            'major': student.major,
             'year': student.year,
         }, status=200)
 
@@ -131,7 +142,7 @@ def api_student_detail(request, pk):
             student.student_id = data.get('student_id', student.student_id)
             student.full_name = data.get('full_name', student.full_name)
             student.email = data.get('email', student.email)
-            student.course = data.get('course', student.course)
+            student.major = data.get('major', student.major)
             student.year = data.get('year', student.year)
             student.save()
             return JsonResponse({'message': 'Student updated successfully'}, status=200)
@@ -148,75 +159,53 @@ def api_student_detail(request, pk):
 @login_required
 def course_list(request):
     courses = Course.objects.all().order_by('code')
-    students = Student.objects.all().order_by('student_id')
-    selected_student_id = request.GET.get('student')
-
-    selected_student = None
+    student = get_object_or_404(Student, user = request.user)
     enrolled_course_ids = []
-
-    if selected_student_id:
-        try:
-            selected_student = Student.objects.get(id=selected_student_id)
-            enrolled_course_ids = selected_student.enrolled_courses.values_list('id', flat=True)
-        except Student.DoesNotExist:
-            selected_student = None
 
     return render(request, 'courses/course_list.html', {
         'courses': courses,
-        'students': students,
-        'selected_student': selected_student,
+        'student': student,
         'enrolled_course_ids': enrolled_course_ids,
     })
 
 
 @login_required
-def enroll_course(request, student_id, course_id):
-    student = get_object_or_404(Student, pk=student_id)
+def enroll_course(request, course_id):
+    student = get_object_or_404(Student, user = request.user)
     course = get_object_or_404(Course, pk=course_id)
 
     if course in student.enrolled_courses.all():
-        messages.warning(request, f'{student.full_name} has already enrolled in {course.name}.')
+        messages.warning(request, f'You have already enrolled in {course.name}.')
     else:
         student.enrolled_courses.add(course)
-        messages.success(request, f'{student.full_name} successfully enrolled in {course.name}.')
+        messages.success(request, f'You successfully enrolled in {course.name}.')
 
-    return redirect(f'/courses/?student={student.id}')
+    return redirect('course_list')
 
 
 @login_required
 def my_timetable(request):
-    students = Student.objects.all().order_by('student_id')
-    selected_student_id = request.GET.get('student')
-
-    selected_student = None
-    courses = []
-
-    if selected_student_id:
-        try:
-            selected_student = Student.objects.get(id=selected_student_id)
-            courses = selected_student.enrolled_courses.all().order_by('weekday', 'start_time')
-        except Student.DoesNotExist:
-            selected_student = None
+    student = get_object_or_404(Student, user=request.user)
+    courses = student.enrolled_courses.all().order_by('weekday', 'start_time')
 
     return render(request, 'courses/my_timetable.html', {
-        'students': students,
-        'selected_student': selected_student,
+        'student': student,
         'courses': courses,
     })
 
 
 @login_required
-def drop_course(request, student_id, course_id):
-    student = get_object_or_404(Student, pk=student_id)
+def drop_course(request, course_id):
+    student = get_object_or_404(Student, user = request.user)
     course = get_object_or_404(Course, pk=course_id)
 
     if course in student.enrolled_courses.all():
         student.enrolled_courses.remove(course)
-        messages.success(request, f'{student.full_name} dropped {course.name}.')
+        messages.success(request, f'You dropped {course.name}.')
     else:
-        messages.warning(request, f'{student.full_name} is not enrolled in this course.')
+        messages.warning(request, f'You are not enrolled in this course.')
 
-    return redirect(f'/my-timetable/?student={student.id}')
+    return redirect('my_timetable')
 
 
 @login_required
@@ -233,4 +222,31 @@ def course_create(request):
     return render(request, 'courses/course_form.html', {
         'form': form,
         'title': 'Add Course'
+    })
+
+
+@login_required
+def my_profile(request):
+    student = get_object_or_404(Student, user=request.user)
+
+    if request.method == 'POST':
+        form = StudentForm(request.POST, instance=student)
+        if form.is_valid():
+            updated_student = form.save(commit=False)
+            updated_student.user = request.user
+            updated_student.save()
+
+            if request.user.email != updated_student.email:
+                request.user.email = updated_student.email
+                request.user.username = updated_student.student_id
+                request.user.save()
+
+            messages.success(request, 'Profile updated successfully.')
+            return redirect('my_profile')
+    else:
+        form = StudentForm(instance=student)
+
+    return render(request, 'students/my_profile.html', {
+        'student': student,
+        'form': form
     })

@@ -15,10 +15,11 @@ class Course(models.Model):
         return f"{self.code} - {self.name}"
 
 class Student(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     student_id = models.CharField(max_length=20, unique=True)
     full_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
-    course = models.CharField(max_length=100)
+    major = models.CharField(max_length=100)
     year = models.PositiveIntegerField(default=1)
     enrolled_courses = models.ManyToManyField(Course, blank=True, related_name='students')
     created_at = models.DateTimeField(auto_now_add=True)

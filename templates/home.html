@@ -2,19 +2,18 @@
 
 {% block content %}
 <h1>Student Information System</h1>
-<p>This is the basic version of a student academic management system built with Django.</p>
-<p>Main features in this version include:</p>
+<p>This system allows students to register, log in, manage their personal profile, browse available courses, enrol in courses, view their timetable, and drop courses.</p>
 <ul>
-    <li>Homepage with system introduction</li>
-    <li>Navigation bar</li>
     <li>User registration, login and logout</li>
-    <li>Student information CRUD</li>
-    <li>JSON API endpoints for student data</li>
+    <li>Personal student profile</li>
+    <li>Course list</li>
+    <li>Timetable</li>
+    <li>Course edition</li>
 </ul>
 
 {% if user.is_authenticated %}
     <p>You are logged in as <strong>{{ user.username }}</strong>.</p>
-    <a class="btn" href="{% url 'student_list' %}">Go to Student List</a>
+    <a class="btn" href="{% url 'my_profile' %}">My Profile</a>
 {% else %}
     <a class="btn" href="{% url 'login' %}">Login</a>
     <a class="btn" href="{% url 'register' %}">Register</a>
