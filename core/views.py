@@ -160,7 +160,7 @@ def api_student_detail(request, pk):
 def course_list(request):
     courses = Course.objects.all().order_by('code')
     student = get_object_or_404(Student, user = request.user)
-    enrolled_course_ids = []
+    enrolled_course_ids = student.enrolled_courses.values_list('id', flat=True)
 
     return render(request, 'courses/course_list.html', {
         'courses': courses,
@@ -210,6 +210,9 @@ def drop_course(request, course_id):
 
 @login_required
 def course_create(request):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Only administrators can create courses.")
+
     if request.method == 'POST':
         form = CourseForm(request.POST)
         if form.is_valid():
@@ -227,7 +230,7 @@ def course_create(request):
 
 @login_required
 def my_profile(request):
-    student = get_object_or_404(Student, user=request.user)
+    student = Student.objects.filter(user=request.user).first()
 
     if request.method == 'POST':
         form = StudentForm(request.POST, instance=student)
@@ -238,7 +241,6 @@ def my_profile(request):
 
             if request.user.email != updated_student.email:
                 request.user.email = updated_student.email
-                request.user.username = updated_student.student_id
                 request.user.save()
 
             messages.success(request, 'Profile updated successfully.')
